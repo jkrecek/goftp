@@ -12,6 +12,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // RePwdPath is the default expression for matching files in the current working directory
@@ -672,14 +673,7 @@ func Connect(addr string) (*FTP, error) {
 		return nil, err
 	}
 
-	writer := bufio.NewWriter(conn)
-	reader := bufio.NewReader(conn)
-
-	//reader.ReadString('\n')
-	object := &FTP{conn: conn, addr: addr, reader: reader, writer: writer, debug: false}
-	object.receive()
-
-	return object, nil
+	return createFTPConnection(addr, conn, false)
 }
 
 // ConnectDbg to server at addr (format "host:port"). debug is ON
@@ -691,15 +685,29 @@ func ConnectDbg(addr string) (*FTP, error) {
 		return nil, err
 	}
 
+	return createFTPConnection(addr, conn, true)
+}
+
+// connect to server, debug is OFF
+func ConnectTimeout(addr string, timeout time.Duration) (*FTP, error) {
+	var err error
+	var conn net.Conn
+
+	if conn, err = net.DialTimeout("tcp", addr, timeout); err != nil {
+		return nil, err
+	}
+
+	return createFTPConnection(addr, conn, false)
+}
+
+// create ftp connection
+func createFTPConnection(addr string, conn net.Conn, debug bool) (*FTP, error) {
 	writer := bufio.NewWriter(conn)
 	reader := bufio.NewReader(conn)
 
-	var line string
-
-	object := &FTP{conn: conn, addr: addr, reader: reader, writer: writer, debug: false}
-	line, _ = object.receive()
-
-	log.Print(line)
+	//reader.ReadString('\n')
+	object := &FTP{conn: conn, addr: addr, reader: reader, writer: writer, debug: debug}
+	object.receive()
 
 	return object, nil
 }
